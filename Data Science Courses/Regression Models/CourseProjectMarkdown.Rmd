@@ -1,0 +1,112 @@
+---
+title: "Course Project"
+author: "Pat Mitoraj"
+date: "December 17, 2017"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+# Course Project
+
+## Executive Summary
+Examining data from the mtcars dataset, there does not appear to be a statistically significant relationship between transmission type and a car's average miles per gallon. While manual transmission cars have a higher miles per gallon on average, once car weight and engine cylinders are accounted for there is not a statistical difference between automatic and manual transmission cars.
+
+##Exploratory Analysis
+Exploratory analysis was done to investigate the relationships between several of the variables in the dataset. First, the relationship between transmission type and miles per gallon was plotted. 
+```{r, echo=FALSE, include=FALSE}
+library(dplyr)
+library(ggplot2)
+library(tidyr)
+```
+Figure 1 of the appendix shows that manual cars tend to have a higher miles per gallon. However, this difference could be accounted for by other variables. To explore this possibility, the researcher next plotted transmission type vs. car weight to see if there was a relationship.
+
+Figure 2 showed that manual cars do tend to have a lower weight than automatic transmission cars, meaning that weight may be influencing the relationship between transmission and mpg.
+
+The other relationship explored was that between transmission type and engine cylinders
+
+FIGURE 3 shows that the majority of automatic cars were 8 cylinders, while the majority of manual cars were only 4 cylinder engines. Again, this is a relationship that could be influencing the relationship between transmission and miles per gallon.
+
+##Model Selection
+The initial model used was a linear model with transmission predicting miles per gallon. This model was used as a baseline to understand how, without accounting for any other variables, transmission and mpg were related.
+```{r}
+model<-lm(mtcars$mpg~mtcars$am)
+```
+
+A second model was also used, which was again a linear regression. However, this model also accounted for car weight and engine cylinders, both of which were shown to have a possible relationship with transmission type in the exploratory data analysis.
+
+```{r}
+model2<-lm(mtcars$mpg~mtcars$am+mtcars$wt+mtcars$cyl)
+```
+
+##Results
+The results of the first model showed a strongly signifcant relationship between miles per gallon and transmission type
+```{r, echo=FALSE}
+summary(model)
+```
+
+These model results show that a manual transmission car was predicted to have 7.245 more miles per gallon than an automatic transmission car. Furthermore with a p value of less than .01, the relationship was significant at the 1% significance level. The plot of the predicted versus actual values (Figure 4) shows that the predicted values fell near the center of the distribution for both automatic and manual transmission cars.
+
+The results for the second model show a very different result.
+```{r, echo=FALSE}
+summary(model2)
+```
+
+Once car weight and engine cylinders are held constant, the coefficient for transmsission drops dramatically (from 7.245 to .18) and is no longer statistically significant. In contrast, both car weight and engine cylinders both appear to have negative relationships with miles per gallon and are signifcant at the 1% significance level. Additionally, this model is a much better predictor of miles per gallon as evidenced by its r-squared value. The first model had an r-squared of .36, while model 2 had an r-squared of .83.  
+
+The results of model 2 are confirmed by the plot of predicted vs. actual results and the residuals (Figure 5). The am plot has larger residuals, as evidence by the higher proportion of solid colored blue and red dots, whereas the cyl and wt graphs are better fits with smaller residuals.
+
+##Conclusion
+In summary, the results of this analysis show that there is not a statistically significant difference between the miles per gallon of automatic cars versus manual transmission cars. Instead, engine cylinders or car weight are much more important factors in identifying which car will get you more miles per gallon.
+
+##Appendix
+###FIGURE 1
+```{r, echo=FALSE}
+mtcars<-mtcars %>%
+  mutate(transmission = ifelse(am == 1,"Manual","Automatic"))
+g<-ggplot(mtcars,aes(transmission,mpg))+geom_point(color="firebrick")
+g+ggtitle("Miles Per Gallon vs Transmission Type")+labs(x="Transmission Type",y="Miles Per Gallon")
+```
+
+###FIGURE 2
+```{r, echo=FALSE}
+g3<-ggplot(mtcars,aes(transmission,wt))+geom_point(color="firebrick")
+g3+ggtitle("Car Weight vs. Transmission Type")
+```
+
+###FIGURE 3
+```{r, echo=FALSE}
+g2<-ggplot(mtcars,aes(transmission))+geom_bar(aes(fill=factor(cyl)))
+g2+ggtitle("Count of Cars by Transmission and Cylinder Number")+
+  theme(legend.position = "top")+
+  guides(fill=guide_legend(title="Number of Cylinders"))
+```
+
+###FIGURE 4
+```{r, echo=FALSE}
+predicted<-predict(model)
+ggplot(mtcars, aes(x = am, y = mpg)) +
+  geom_smooth(method = "lm", se = FALSE, color = "lightgrey") +  
+  geom_segment(aes(xend = am, yend = predicted), alpha = .2) +
+  geom_point() +
+  geom_point(aes(y = predicted), shape = 1) +
+  theme_bw()
+```
+
+###FIGURE 5
+```{r, echo=FALSE}
+library(tidyr)
+d <- mtcars %>% select(mpg, am, wt, cyl)
+d$predicted2<-predict(model2)
+d$residuals2<-resid(model2)
+d %>% 
+  gather(key = "iv", value = "x", -mpg, -predicted2, -residuals2) %>% 
+  ggplot(aes(x = x, y = mpg)) +
+  geom_segment(aes(xend = x, yend = predicted2), alpha = .2) +
+  geom_point(aes(color = residuals2)) +
+  scale_color_gradient2(low = "blue", mid = "white", high = "red") +
+  guides(color = FALSE) +
+  geom_point(aes(y = predicted2), shape = 1) +
+  facet_grid(~ iv, scales = "free_x") +
+  theme_bw()
+```
